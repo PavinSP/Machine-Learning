@@ -35,8 +35,34 @@ class Node:
         
         #compute scores
         
-        #TODO 
-        #compute score[i,j] (= classification accuracy when splitting at sample i and feature j) for all samples i and features j
+        y = self.y[:, 0].astype(np.int64)
+        n_samples, n_features = self.X.shape
+        n_samples_float = float(n_samples)
+
+        for j in range(n_features):
+            xj = self.X[:, j]
+            order = np.argsort(xj, kind='quicksort')
+            x_sorted = xj[order]
+            y_sorted = y[order]
+
+            _, first_idx, inv_sorted = np.unique(
+                x_sorted, return_index=True, return_inverse=True
+            )
+
+            prefix_ones = np.empty(n_samples + 1, dtype=np.int64)
+            prefix_ones[0] = 0
+            np.cumsum(y_sorted, out=prefix_ones[1:])
+
+            left_size = first_idx
+            left_ones = prefix_ones[first_idx]
+            right_size = n_samples - left_size
+            right_ones = prefix_ones[-1] - left_ones
+
+            correct_left = np.maximum(left_ones, left_size - left_ones)
+            correct_right = np.maximum(right_ones, right_size - right_ones)
+            accuracy_per_unique_threshold = (correct_left + correct_right) / n_samples_float
+
+            score[order, j] = accuracy_per_unique_threshold[inv_sorted]
 
         #assign optimal splitting rule
         minSample, minFeature = np.unravel_index(np.argmin(score),score.shape)
